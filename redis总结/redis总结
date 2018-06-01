@@ -1,0 +1,240 @@
+redis总结
+1.
+	redis 是key-value的数据结构  
+		键的类型是字符串 键是不能重复的
+		键的类型分为5种 字符串string 哈希hash 列表list 集合set 有序集合zset
+
+	keys *
+	keys "a*"
+	exists name1
+	type name1
+	del name1
+	expire name 10
+	ttl
+2.字符串
+
+	最基础的数据存储类型 可以接受任何格式的数据 JPEG图像 Json对象描述信息等 value数据长度最大512M
+
+	set name itcast // 设置键为name 值为itcast
+
+	setex name1 10 itcast // 设置键为name 值为itcast 10s过期
+
+	mset name2 itcast age 18 //设置多个键值
+
+	append name2 haha //itcasthaha
+
+	get name 
+
+	mget name name1 name2 age
+
+	del name name1
+
+	expire name2 10 //设置键name2过期时间为10s
+
+	ttl name2 // 查看name2有效时间
+
+3.hash类
+
+	hash存储对象，对象的结构为属性，值
+	值的类型是string
+
+	hset user name itheima // 设置键为user 属性为name的值为itheima
+
+	hmset user1 name dg age 18 //设置键为user1 属性name的值为dg 属性age的值为10
+
+	hkeys user // 获取user所有属性
+	hkeys user1
+
+	hkeys user name //获取user的name属性的值
+
+	hmget user1 name age // 获取user的name属性和age属性的值
+
+	hvals user1 //获取user1所有属性的值
+
+	hdel user1 age // 删除user1的属性age
+
+4.list类型
+	
+		列表的元素类型为string
+
+		lpush a1 a b c //里面的元素顺序为：c(0) b(1) a(2)
+
+		rpush a2 a b c //里面的元素顺序为：a(0) b(1) c(2)
+
+		rpush a1 0 1 // 在a1列表右侧添加数据0,1  cba01
+
+		linsert a1 before b 3 //在a1列表元素b之前添加元素c3ba01
+
+		lrange a1 0 -1 // c 3 b a 0 1
+
+		lset a 1 z // c z b a 0 1 修改下表为1的元素为z
+
+		lpush a3 a b a b a b //b a b a b a
+
+		lrem a3 -2 b //从a2列表右侧开始删除两个b a  a a
+
+5.set类型
+	
+		无序集合 元素为string 具有唯一性 不重复 对于集合没有修改操作
+
+		sadd a3 zhangsan lisi wangwu //a3集合中添加元素zhangsan lisi wangwu 
+
+		smembers a3 //获取a3中集合所有元素
+
+		srem a3 wangwu //删除a3中集合元素wangwu
+
+6.zset类型
+	
+		有序集合 元素为string 元素具有唯一性 不重复 
+		每个元素都会有权重 通过权重来将元素从小到排序 没有修改操作
+
+		zadd a4 4 lisi 5 wangwu 6 zhaoliu 3zhangsan //zhangsan lisi wangwu zhaoliu
+
+		zrange a4 0 -1
+
+		zrangebyscore a4 5 6 //获取键a4的集合中权值在5和6之间的成员
+
+		zscore a4 zhangsan //返回zhangsan的权重
+
+		zrem a4 zhangsan
+
+		zremrangebyscore a4 5 6 //删除集合a4权重在5 6 之间的元素
+
+7.导入 redis 模块
+
+	from redis import * 
+	sr = StrictReids(host="localhost",port=6379,db=0)
+	sr = StrictRedis() //简写
+
+	string		keys		hash 		list 		set 	zset
+	set 		exists		hmset 		lpush		sadd	zadd
+	setex		type		hmset		rpush		smembers	
+	mset		delete		hkeys		linsert		srem	zrange
+	append		expire		hget 		lrange				zscore
+	get			getrange	hmget		linsert 			zrem
+	mget		ttl			hvals		lrem				zremrangebyscore
+	keys 					hdel
+8.代码
+
+	from redis import *
+	if __name__=="__main__":
+	    try:
+	        #创建StrictRedis对象，与redis服务器建⽴连接
+	        sr=StrictRedis()
+
+	        result1=sr.set("name","itheima")
+
+	        print(result)	// 添加成功True 添加失败False
+
+	        result2=sr.get("name")
+
+	        print(result1)	//存在返回键对应的值 键不存在返回None
+
+	        result3=sr.set("name","itcast")
+
+	        print(result3)	//操作成功True 失败False
+
+	        result4=sr.delete("name")
+
+	        print(result4)	//删除成功返回受影响的键数，否则返回0
+
+	        result5=sr.keys()
+
+	        print(result5)	//	输出响应结果 所有的键构成个列表 没有键则返回空列表
+	    except Exception as e:
+	        print(e)
+9.Redis的主从
+
+	Master(写)可以拥有多个slave(读) slave()可以拥有多个slave(读) 读写比率10:1
+	通过主从配置可以实现读写分离
+
+	主：
+		查看当前主机的ip地址	ifconfig	192.168.26.128
+		修改etc/redis/redis.conf		sudo vi redis.conf	bind 192.168.26.128
+		重启服务		sudo service redis stop		redis-server redis.conf
+
+	从：
+		复制etc/redis/redis.conf文件		sudo cp redis.conf ./slave.conf
+		修改redis/slave.conf 		sudo vi slave.conf
+		编辑内容		bind 192.168.26.128
+					slaveof 192.168.26.128 6379
+					port 6378
+		redis服务 	sudo redis-server salve.conf
+		查看主从关系	redis-cli -h 192.168.26.128 info Replication
+
+	数据操作：
+		master slave上 分别执行 
+		进入主客户端
+			redis-cli -h 192.168.26.128 -p 6379
+		进入从客户端
+			redis-cli -h 192.168.26.128 -p 6378
+		master
+			set aa 123
+		slave
+			get aa
+10.集群
+
+	在主机 172.168.179.30的机器上 进入Desktop 创建 config目录 在config目录下创建文件7000.conf
+
+	7000.conf
+		port 7000 //
+		bind 172.168.179.130
+		daemonize yes
+		pidfile 7000.pid  //
+		cluster-enabled yes
+		cluster-config-file 7000_node.conf
+		cluster-node-timeout 15000
+		appendonly yes
+
+	7001.conf
+		port 7001 //
+		bind 172.168.179.130
+		daemonize yes
+		pidfile 7001.pid  //
+		cluster-enabled yes
+		cluster-config-file 7001_node.conf
+		cluster-node-timeout 15000
+		appendonly yes
+
+	7002.conf
+		port 7002 //
+		bind 172.168.179.130
+		daemonize yes
+		pidfile 7002.pid  //
+		cluster-enabled yes
+		cluster-config-file 7002_node.conf
+		cluster-node-timeout 15000
+		appendonly yes
+
+	启动redis服务
+		redis-server 7000.conf
+		redis-server 7001.conf
+		redis-server 7002.conf
+
+	与python交互
+
+		pip install redis-py-cluste
+
+		redis_cluster.py
+		
+		代码：
+
+		from rediscluster import *
+		if __name__ == '__main__':
+		  try:
+		    # 构建所有的节点，Redis会使⽤CRC16算法，将键和值写到某个节点上
+		    startup_nodes = [
+		        {'host': '192.168.26.128', 'port': '7000'},
+		        {'host': '192.168.26.130', 'port': '7003'},
+		        {'host': '192.168.26.128', 'port': '7001'},
+		    ]
+		    # 构建StrictRedisCluster对象
+		    src=StrictRedisCluster(startup_nodes=startup_nodes,decode_responses=True)
+		    # 设置键为name、值为itheima的数据
+		    result=src.set('name','itheima')
+		    print(result)
+		    # 获取键为name
+		    name = src.get('name')
+		    print(name)
+		  except Exception as e:
+		    print(e)

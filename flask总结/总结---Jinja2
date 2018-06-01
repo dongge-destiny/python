@@ -1,0 +1,269 @@
+总结---Jinja2
+1.
+	模板  包含响应文本的而文件 用占位符(变量)表示动态部分
+		使用真实值替换变量，再返回最终得到的字符串 渲染
+
+	模板的好处
+		视图函数值负责业务逻辑和数据处理
+		模板则取到视图函数的数据结果进行展示
+		代码结构清晰，耦合度低	
+
+2.Jinja2 
+
+	Flask内置的模板语言(模板语言 一种被设计来自动生成文档的简单文本格式，一般会把一些变量传递给模板 替换模板特定位置上的预先定义好的占位变量名)
+
+	Flask提供render_template函数封装了该模板引擎
+	render_template("模板文件名"，键值对(模板变量对应真实值))
+
+3.	{{}}	表示变量名	变量代码块
+
+	{% %}	控制代码块(实现一些语言层次功能 循环if语句)
+
+	{#{{name }}#}	注释
+
+4.
+	模板的使用
+		在项目下创建templates文件夹，用于存放所有的模板文件，1.html
+
+		设置templates文件夹属性以便能在代码中智能提示
+
+5.
+	代码：
+		@app.route("/")
+		def index():
+			mystr="hello world"
+			my_int=10,
+			my_arr=[3,4,7,14,21,9],
+			my_dict={
+				"name":"xiaoming"，
+				"age":18
+			}
+			return render_template("1.html",my_str=my_str,my_int=my_int,my_arr=my_arr,my_dict=my_dict)
+
+	模板：
+		<p>{{my_str}}</p>
+		<p>{{my_int}}</p>
+		<p>{{my_arr}}</p>
+		<p>{{my_dict}}</p>
+		{% for index in my_arr%}
+			{% if index % 7 = 0 %}
+				{{index}}
+			{% endif %}
+		{% endfor %}
+
+6.过滤器
+
+	过滤器本质是函数，作用是格式化输出变量的值
+	变量名 | 过滤器
+
+	<p>默认输出:{{ 'bAnk OF chInA' }}</p>
+	<p>过滤器capitalize:{{ 'bAnk OF chInA' | capitalize }}</p>
+	<p>过滤器upper:{{ 'bAnk OF chInA' | upper }}</p>
+	<p>过滤器title:{{ 'bAnk OF chInA' | title }}</p>
+	<p>过滤器lower:{{ 'bAnk OF chInA' |lower }}</p>
+	<p>过滤器reverse:{{ 'bAnk OF chInA' |reverse }}</p>
+	//字符串截断
+	<p>{{ 'hello every one' | truncate(9)}}</p>
+
+	 过滤器可以链式调用 执行过程 从前到后 依次执行
+
+	<p>过滤器两个:{{ 'bAnk OF chInA' | reverse |lower }}</p>
+	<p>过滤器两个:{{ 'bAnk OF chInA' |reverse|reverse }}</p>
+	<p>过滤器三个:{{ 'bAnk OF chInA' |reverse|lower|reverse }}</p>
+
+	 过滤器对列表处理
+
+	<p>默认输出：{{ [9,2,3,5,6] }}</p>
+	<p>过滤器first:{{ [9,2,3,5,6] | first }}</p>
+	<p>过滤器last:{{ [9,2,3,5,6] | last }}</p>
+	<p>过滤器length:{{ [9,2,3,5,6] | length }}</p>
+	<p>过滤器sum:{{ [9,2,3,5,6] | sum }}</p>
+	<p>过滤器sort:{{ [9,2,3,5,6] | sort }}</p>
+
+	 禁用转义 safe 在确认数据没有安全隐患 可以使用safe
+	 模板默认开启转义(出于安全考虑开启)，把字符串中的特殊字符(<>&')当成原始字符串输出
+
+	<p>默认输出:{{ '<h1>china</h1>' }}</p>
+	<p>过滤器safe:{{ '<h1>china</h1>'|safe }}</p>
+
+	把所有html标签删掉
+
+	<p>过滤器striptags:{{ '<h1>china</h1>'|striptags }}</p>
+
+	自定义过滤器一:
+
+	自定义过滤器如果和内置的过滤器重名,会重写该过滤器
+
+	def filter_list(ls):
+		tem_ls=list(ls)
+		tem_ls.reverse()
+		return tem_ls
+
+	添加自定义过滤器模板(第一个参数为函数名 第二个参数为过滤器名字)
+	app.add_template_filter(filter_list,"db1")
+	<p>{{ [1,2,3,4,5] | db1 }}</p>
+
+	自定义过滤器二:
+
+	@app.template_filter("db2")
+	def filter(str)
+		return str[::-3]
+	<p>{{ 'abcdefg' | db2 }}</p>
+
+7.控制代码块
+
+	 循环和判断语句的基本使用:
+
+			{% for item in my_list %}
+				//索引从0开始
+			    {{ loop.index0 }}
+			    //索引从1开始
+			    {{ loop.index}}
+			    {{ item }}
+			    <br>
+			    <hr>
+			{% endfor %}
+
+	{% for item in my_list %}
+	    {% if loop.index==1 %}
+	        <li style="background-color: blue">{{ item.value }}</li>
+	    {% elif loop.index==2 %}
+	        <li style="background-color: beige">{{ item.value }}</li>
+	    {% elif loop.index==3 %}
+	        <li style="background-color: gold">{{ item.value }}</li>
+	    {% elif loop.index==4 %}
+	        <li style="background-color: purple">{{ item.value }}</li>
+	    {% else %}
+	        <li style="background-color: brown">{{ item.value }}</li>
+	    {% endif %}
+	{% endfor %}
+
+8.模板的继承 
+
+	本质是代码的替换 作用是实现模板页面固定不变的区域块 关键字block 模板的继承不支持多继承 
+
+	1.便于阅读 在子模板中使用extends时 尽量写在模板第一行
+	2.不能在一个模板文件中定义多个相同名字的block标签
+	3.当在页面中使用多个block标签时 建议给 结束标签起个名字，当多个block嵌套时 阅读性更好
+
+	a.父模板 实现多个页面中相同的区域块 一般是顶部 底部 中间部分内容
+	b.子模板 如果想要实现自己特有的页面内直接重写指定的区域块
+	c.子模板 如果不想要父模板中的部分内容 直接声明区域块 内容为空
+	d.子模板 如果既想要实现自己的内容 又想使用父模板的 super()
+
+	base.html:
+		{% block topBlock %}
+			<p>我是base模板顶部内容</p>
+		{% endblock %}
+		{% block contentBlock %}
+			<p>我是base模板顶部内容</p>
+		{% endblock %}
+		{% block bottomBlock %}
+			<p>我是base模板顶部内容</p>
+		{% endblock %}
+
+	1.html:
+		{% extends("base.html") %}
+		{% block contentBlock %}
+			//都要保留 使用 super()
+			{{super()}}
+			<p>我是1-复习.html模板中间的内容</p>
+		{% enblock%}
+
+9.宏的使用
+
+	宏的本质是函数 用来实现模板页面的动态封装 关键字macro
+	
+	{% macro fun(type='type',size='size') %}
+		用户名<input type="{{type}}" name="user" placeholder="User" size="{{size}}">
+		密码<input type="{{type}}" name="password" placeholder="Password" size="{{size}}">
+		<input type="submit">
+	{% endmacro %}
+	// 必须调用函数才可以
+	{{ fun(type="text",size="10") }}
+
+	导入宏
+	{% import "macro_temp.html" as f%}
+
+	//使用别名调用宏
+	{{f.fun(type="text",size="10")}}
+
+10.包含的使用
+
+	包含的本质是完整的复用 实现模板页面的完全复用
+
+	如果包含的文件不存在 使用ignore missing忽略失踪找不到该文件
+	{% include "include.html" ignore missing}
+
+11 宏 继承 包含 均能实现代码的复用
+
+	1.继承本质是代码替换 一般用来实现多个页面中重复不变的区域
+	2.宏的功能类似函数 可以传入参数 需要定义 使用
+	3.包含 直接将目标模板文件整个选入出来
+
+12.模板特有的变量和函数
+
+	config
+	{{config.SQLALCHEMY_DATABASE_URI}}
+	request
+	{{request.url}}
+	session
+	{{session.new}}
+	在视图函数中设置g变量name的属性值 然后在模板中可以直接取出来
+	{{g.name}}
+
+13.web表单
+
+	使用Flask_WTF拓展 封装了WTFFroms 并且有验证表单数据功能
+	使用Flask_WTF 需要配置参数SECRET_KEY
+	CSRF_ENABLED 是为了CSRF(跨站请求伪造)保护
+	SECRET_KEY用来生成加密令牌 当CSRF激活的时候 该设置会根据设置的秘钥生成加密令牌
+
+	//导入拓展包
+	from flask_wtf import FlaskForm
+	from wtforms import StringField,PasswordField,SubmitField
+
+	//导入验证函数
+	from wtforms.validators import DataRequired,EqualTo
+
+	//wtf表单 避免手写input表单 自带验证函数 验证表单数据 开启csrf保护
+	
+	class Form(FlaskForm)
+		name=StringField(validators=[DataRequired()])
+		pswd=PasswordField(validators=[DataRequired(),EqualTo("pswd2")])
+		pswd2=PasswordField(validators=[DataRequired()])
+		submit=SubmitField("注册")
+
+	@app.route("/",methods=[])
+	def index():
+		form= Form()
+		print(form.validate_on_submit())
+		name=form.name.data
+		pswd=form.pswd.data
+		pswd2=form.pswd2.data
+		print(name,pswd,pswd2)
+		return render_template("1.html",form=form)
+
+	<form method="POST">
+		{{form.csrf_token}}
+		<p>用户：{{ form.name }}</p>
+	    <p>密码：{{ form.pswd }}</p>
+	    <p>确认密码：{{ form.pswd2 }}</p>
+	    <p>{{ form.submit }}</p>
+	</form>
+
+14.CSRF 跨站请求伪造
+
+	正常网站
+	恶意网站 把正常网站的url放到自己的网站中，伪造了请求参数
+
+	访问：
+	1.普通用户访问正常的网站，登陆账户
+	2.正常网站 实现状态保持写入了cookie
+	3.用户在未登录正常网站的情况下，访问了恶意网站（优惠券 图片 等等)
+	4.用户在主观未知的情况下，再次访问了正常网站
+
+	跨站请求保护
+	1.在请求参数中加入混淆字符串 csrf_token
+	2.response。set_coookie("csrf_token",csrf_token)
+	3.服务器会获取客户端浏览器中的csrf_token和模板页面中的csrf_token进行比较 如果一致 该请求不是伪造的

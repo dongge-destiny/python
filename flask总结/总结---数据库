@@ -1,0 +1,399 @@
+总结---数据库
+
+1.ORM 
+
+	对象-关系映射 模型对象到关系数据库数据的映射
+
+	优点：
+	只需要面对对象编程，不需要面向数据库编写代码
+	实现了数据模型与数据库的解耦，屏蔽了不同数据库操作上的差异
+
+	缺点：
+	相比较直接使用SQL语句操作数据库 有性能损失
+	根据对象的操作转成sql语句 根据查询结果转化成对象 在映射过程中有性能损失
+
+2.安装 
+
+	pip install flask_sqlalchemy
+
+	连接的mysql数据库 
+	pip isntall flask_mysqldb
+
+	数据库连接的设置(可以不写127.0.0.1:3306)
+	app.config["SQLALCHEMY_DATABASE_URI"]="mysql://root:admin@localhost127.0.0.1:3306/test1"
+
+	动态追踪修改设置 如果未设置只会提示警告
+	app.config['SQLALCHEMY_TRACK_MODIFICATIONS']=True
+
+	查询时会显示原始的sql语句(对调试有用 打印sql语句)
+	app.config['SQLALCHEMY_ECHO']=True
+
+	在数据库中 创建数据库 
+	mysql-uroot -padmin
+	create database test1 charset=utf8;
+3.
+	SQLALCHEMY字段类型：
+
+	Integer			int 		32位
+	SmallInterger	int 		16位
+	BigInter		int 		不限制
+	Float			float 		浮点数
+	Numeric			decimal.Decimal	普通整数 一般32位
+	String			str 		字符串
+	Text			str 		
+	Unicode			unicode 	
+	UnicodeText 	unicode
+	Boolean 		boolean 	布尔值
+	Date 			datetime 	时间
+	Time 			datetime.datetime 	日期和时间
+	LargeBinary		str 		二进制文件
+
+	SQLALCHEMY列选项：
+
+	primary_key		True	代表主键
+	unique			True	代表这列不允许出现重复的值
+	index			True 	为这列创建索引 提高查询效率
+	nullable		True 	允许有空值
+	default			定义默认值
+
+	SQLALCHEMY关系选项：
+
+	backref			在关系的另一模型中添加反向引用
+	primary.join	明确指定两个模型之间使用的联结条件
+	uselist			True 使用列表 否则使用标量值
+	order_by		指定关系中记录的排序方式
+	secondary		指定多对关系中关系表的名字
+	secondary.join	在SQLALCHEMY中无法自行决定时，指定多对多关系中的二级联结条件
+
+4.
+
+	SQLALCHEMY查询过滤器:
+
+		filter()		User.query.filter(User.name.endswith('g')).all()				
+		filter_by()		User.query.filter_by(name="wang").all()
+		limit
+		offset()
+		order_by()
+		group_by()
+
+	SQLALCHEMY查询执行器：
+
+		all()				以列表的形式返回查询的所有结果
+		first()				返回查询的第一的结果，如果没查找到，返回none
+		first_or_404()		返回查询的第一个结果，如果未查询到，返回404
+		get()				返回指定主键对应的行，如果不存在，返回none
+		get_or_404()		返回指定主键对应的行，如果不存在，返回none
+		count()				返回查询结果的数量
+		paginate()			返回一个paginate对象 包含指定范围内的结果
+
+	from sqlalchemy import and_,or_,not_ 
+		User.query.filter(and_(User.name!='wang',User.email.endswith('163.com'))).all()
+
+5.代码：
+	
+	from flask import Flask
+	//导入拓展包Flask_SQLALCHEMY
+	from flask_sqlalchemy import SQLAlchemy
+
+	app=Flask(__name__)
+
+	app.config["SQLALCHEMY_DATABASES_URI"]="mysql://root:admin@localhost/test1"
+	app.config["SQLALCHEMY_ECHO"]=True
+	app.config["SQLALCHEMY_TRACK_MODIFICATIONS"]=True
+	//实例化SQLALCHEMY对象
+	db = SQLAlchemy(app)
+	//自定义模型类Role：一方
+	class Role(sb.Model):
+		//定义表名，如果未定义默认创建的是同类名的表名
+		__tablename__="roles"
+		id=db.Colunm(db.Integer,primary_key=True)
+		name=db.Colunma(db.String(32),unique=True)
+		//一对多的关系模型中 一方定义关系
+		//us给一方使用，实现一对多的查询
+		//backref给多方使用，实现多对一的查询
+		//关系定义在数据库没有实体
+		//lazy 决定了什么时候SQLALCHEMY从数据库中加载数据
+		//如果是子查询方式 会在加载完Role对象后 会立即加载与其关联的对象，会让总查询量减少
+
+		//设置为subquery role.users返回所有数据列表
+		//设置为dynamic roles.users返回查询对象，并没有做真正的查询，可以利用查询对象做其他逻辑
+		us =db.relationship('User',backref="role",lazy="dynamic")
+
+		//repr 返回的是可读字符串
+		def repr(self):
+			return "Role :%s" %self.name
+
+	class User(db.model):
+		__tablename__="users"
+		id=db.Colunmn(db.Integer,primary_key=True)
+		name=db.Column(db.String(32),unique=True,index=True)
+		email=db.Column(db.String(32),unique=True)
+		password=db.Column(db.String(32))
+		role_id=db.Column(db.Integer,db.ForeignKey("'roles.id"))
+
+		def repr(self):
+			//return "User:%s" %self.name
+			//返回的是列表 多个数据
+			return "%s" %self.to_dict
+
+		def to_dict(self):
+			mydict={
+			'id':self.id,
+			'name':self.name,
+			'email':self.email,
+			'password':self.password,
+			'role_id':slef.role_id
+			}
+	if __name__=="__main__":
+		//删除表
+		ab.drop_all()
+		//创建表
+		db.create_all()
+		//添加测试数据
+		ro1=Role(name="admin")
+		ro2=Role(name="user")
+		//db.session数据库会话对象 add_all添加多条数据
+		db.session.add_all([ro1,ro2])
+		//commit提交执行后 会把数据写入到数据库中
+		db.session.commit()
+		us1=User(name="wang",email="wang@163.com",pswd="123456",role_id=ro1.id)us2=User(name="zhang",email="zhang@163.com",pswd="201512",role_id=ro1.id)us3=User(name="chen",email="chen@163.com",pswd="987654",role_id=ro1.id)us4=User(name="zhou",email="zhou@163.com",pswd="456897",role_id=ro1.id)
+		db.session.add_all([us1, us2, us3, us4])
+    	db.session.commit()
+
+    	//查询数据后删除
+    	user = User.query.first()
+		db.session.delete(user)
+		db.session.commit()
+		User.query.all()
+		app.run(debug=True)
+		//更新数据
+		user = User.query.first()
+		user.name = 'dong'
+		db.session.commit()
+		User.query.first()
+		//us
+		a=User.query.get(1)
+		a.us
+
+	多对多
+
+	registrations=db.Table("registrations",
+		db.Column("stu_id",db.Integer,db.ForeginKey("students.id")),
+		db.Column("course_id",db.Integer,db.ForeginKey("course.id")),
+	)
+	class Course(db.Model):
+	    __tablename__ = "courses"
+	    id = db.Column(db.Integer, primary_key=True)
+	    name = db.Column(db.String(64), unique=True)
+	class Student(db.Model):
+		__tablename__ = "students"
+	    id = db.Column(db.Integer, primary_key=True)
+	    name = db.Column(db.String(64), unique=True)
+		courses=db.relationship("Course",secondary=registrations,backref="students",lazy="dynamic")
+
+	if __name__ == '__main__':
+	    db.drop_all()
+	    db.create_all()
+
+	    # 添加测试数据
+
+	    stu1 = Student(name='张三')
+	    stu2 = Student(name='李四')
+	    stu3 = Student(name='王五')
+
+	    cou1 = Course(name='物理')
+	    cou2 = Course(name='化学')
+	    cou3 = Course(name='生物')
+
+	    stu1.courses = [cou2, cou3]
+	    stu2.courses = [cou2]
+	    stu3.courses = [cou1, cou2, cou3]
+
+	    db.session.add_all([stu1, stu2, stu2])
+	    db.session.add_all([cou1, cou2, cou3])
+
+	    db.session.commit()
+
+	    app.run(debug=True)
+
+6.数据库迁移
+	pip install flask-migrate
+
+	#第一个参数是Flask的实例，第二个参数是Sqlalchemy数据库实例
+	migrate = Migrate(app,db) 
+
+	#manager是Flask-Script的实例，这条语句在flask-Script中添加一个db命令
+	manager.add_command('db',MigrateCommand)
+
+	if __name__ == '__main__':
+    manager.run()
+
+
+    1.python 文件 db init
+	2.python 文件 db migrate -m"版本名(注释)"
+	3.python 文件 db upgrade 然后观察表结构
+	4.根据需求修改模型
+	5.python 文件 db migrate -m"新版本名(注释)"
+	6.python 文件 db upgrade 然后观察表结构
+	7.若返回版本,则利用 python 文件 db history查看版本号
+	8.python 文件 db downgrade(upgrade) 版本号
+7.关系模板代码
+
+8.蓝图
+
+	导包不嗯能够实现路由映射，只能实现函数或代码的调用
+	flask程序进行模块化处理
+	一个应用可以具有多个Blueprint 
+	在一个应用中 一个模块可以注册多次
+
+	1.创建一个蓝图对象（新的demo1_user.py文件 demo3_orders_goods.py）
+
+	api = Blueprint('api',__name__,url_prefix='/user')
+
+	gdss = Blueprint('gdss',__name__)
+	2.在这个蓝图对象上进行操作,注册路由,指定静态文件夹,注册模版过滤器
+
+	@api.route('/register')
+	def register():
+	    return 'register'
+
+	@gdss.route('/goods')
+	def goods():
+	    return 'goods'
+
+	    （新的 demo2_user.py ）
+	    from demo1_user import api
+		@api.route('/avatar')
+		def avatar():
+		    return 'avatar'
+	3.在应用对象上注册这个蓝图对象 （主文件）
+
+	from demo1_user import api
+	app.register_blueprint(api)
+
+	from demo3_orders_goods import gdss
+	app.register_blueprint(gdss,url_prefix='/gdss')
+
+9.单元测试
+
+	web程序开发过程 需求分析，设计阶段，实现阶段，测试阶段
+	测试阶段通过人工或自动来运行测试某个系统的功能。
+	目的是检验其是否满足需求，并得出特定的结果，以达到弄清楚预期结果和实际结果之间的差别的最终目的。
+
+	测试从软件开发过程可以分为：
+		单元测试(开发人元关系最密切)
+			对单独的代码块(例如函数)分别进行测试,以保证它们的正确性
+		集成测试
+			对大量的程序单元的协同工作情况做测试
+		系统测试
+			同时对整个系统的正确性进行检查,而不是针对独立的片段
+
+	Web开发过程中，单元测试实际上就是一些“断言”（assert）代码。
+
+	assertEqual     如果两个值相等，则pass
+	assertNotEqual  如果两个值不相等，则pass
+	assertTrue      判断bool值为True，则pass
+	assertFalse     判断bool值为False，则pass
+	assertIsNone    不存在，则pass
+	assertIsNotNone 存在，则pass
+
+	def fibo(x):
+    if x == 0:
+        resp = 0
+    elif x == 1:
+        resp = 1
+    else:
+        return fibo(x-1) + fibo(x-2)
+    return resp
+	assert fibo(5) == 6，'not fibo'
+
+	单元测试基本写法
+	import unittest
+	class TestClass(unitest.TestCase):
+	    pass
+	   import unittest
+	class TestClass(unittest.TestCase):
+
+    #该方法会首先执行，方法名为固定写法
+    def setUp(self):
+        pass
+
+    #该方法会在测试代码执行完后执行，方法名为固定写法
+    def tearDown(self):
+        pass
+
+    #测试代码
+    def test_app_exists(self):
+        pass
+
+    单元测试代码
+
+    import json
+	import unittest
+	from demo1_login import app
+
+	class LoginTest(unittest.TestCase):
+	    """为登录逻辑编写测试案例"""
+
+	    def setUp(self):
+	        app.testing = True
+	        self.client = app.test_client()
+
+	    def test_empty_username_password(self):
+	        """测试用户名与密码为空的情况[当参数不全的话，返回errcode=-2]"""
+	        response = app.test_client().post('/login', data={})
+	        json_data = response.data
+	        json_dict = json.loads(json_data)
+
+	        self.assertIn('errcode', json_dict, '数据格式返回错误')
+	        self.assertEqual(json_dict['errcode'], -2, '状态码返回错误')
+
+	        # TODO 测试用户名为空的情况
+
+	        # TODO 测试密码为空的情况
+
+	    def test_error_username_password(self):
+	        """测试用户名和密码错误的情况[当登录名和密码错误的时候，返回 errcode = -1]"""
+	        response = app.test_client().post('/login', data={"username": "aaaaa", "password": "12343"})
+	        json_data = response.data
+	        json_dict = json.loads(json_data)
+	        self.assertIn('errcode', json_dict, '数据格式返回错误')
+	        self.assertEqual(json_dict['errcode'], -1, '状态码返回错误')
+
+	        # TODO 测试用户名错误的情况
+
+	        # TODO 测试密码错误的情况
+
+		if __name__ == '__main__':
+		    unittest.main()
+
+
+
+
+	    #coding=utf-8
+	import unittest
+	from author_book import *
+
+	#自定义测试类，setUp方法和tearDown方法会分别在测试前后执行。以test_开头的函数就是具体的测试代码。
+	class DatabaseTestCase(unittest.TestCase):
+	    def setUp(self):
+	        app.config['TESTING'] = True
+	        app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql://root:mysql@localhost/test0'
+	        self.app = app
+	        db.create_all()
+
+	    def tearDown(self):
+	        db.session.remove()
+	        db.drop_all()
+
+	    #测试代码
+	    def test_append_data(self):
+	        au = Author(name='itcast')
+	        bk = Book(info='python')
+	        db.session.add_all([au,bk])
+	        db.session.commit()
+	        author = Author.query.filter_by(name='itcast').first()
+	        book = Book.query.filter_by(info='python').first()
+	        #断言数据存在
+	        self.assertIsNotNone(author)
+	        self.assertIsNotNone(book)

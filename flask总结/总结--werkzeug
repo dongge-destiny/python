@@ -1,0 +1,388 @@
+总结--werkzeug
+
+1.	web诞生的最初目的 是为了利用互联网交流工作文档
+		client 发送http请求给server，server响应请求，将结果返回给客户端
+2.	web框架 
+
+	协助开发者快速开发web应用程序的一套功能代码，开发者只需要按照约定框架的要求，在指定位置上写上自己的业务逻辑代码
+
+	web框架优点：
+
+		稳定性和可拓展性强 可以降低开发难度 提高开发效率
+
+3.	flask框架的核心：Werkzeug和Jinja2
+
+	没有默认使用的数据库 
+	轻量 简洁 拓展性强
+
+4.	虚拟环境：
+
+	可以搭建独立的python运行环境，使得单个项目的运行环境与其他项目互不影响
+
+5.	linux和window下虚拟环境的安装
+
+		pip install virtualenv
+		workon
+		mkvirtualenv -p python3 虚拟环境名称 		virtualenv 虚拟环境名称
+		workon 虚拟环境名称		虚拟环境名称/Scripts/activate
+		pip install virtualenv
+		deactivate
+		rmvirtualenv 虚拟环境
+
+6.	依赖包 
+
+			pip freeze > requirements.txt
+			pip install requirements.txt
+
+7.代码
+
+	from flask import Flask
+	app=Flask(__name__)			（Flask函数接收一个参数 		                                会指向程序所在的包）
+	@app.route("/")				（装饰器的作用是将路由
+									映射到视图函数index）
+	def index():
+		return "hello world"
+	if __name__=="__main__"		
+		app.run()				(Flask应用程序实例run方法
+									启动WEB服务器)
+
+	在程序实例中 会使用url_map将装饰器路由和视图对应关系保存起来
+
+	视图函数不允许重名 url可以重名
+
+8.相关配置参数
+
+	初始化参数 app=Flask(__name__)
+
+		需要默认传入当前Flask程序指定的包（模块）
+		__name__可以决定Flask在访问静态文件时查找的路径
+
+	程序加载配置 三种方式 
+
+		DEBUG(调试模式)
+			调试模式的好处：程序代码修改后可以自动重启服务器
+				在服务器出现相关错误的时候可以将错误信息进行抛出在控制台打印
+
+		从配置对象中加载（常用）
+			class Config(object):
+				DEBUG=True;
+			需要创建新的.py然后导入模块 模块里的类名
+			app.config.from_object(Config)
+
+		从配置文件中加载
+			config.ini文件里
+				DEBUG=True
+			需要创建新的.ini文件
+			app.config.from_pyfile("config.ini")
+
+		从环境变量中加载
+			app.config.from_envar("变量名字")
+
+	读取配置
+
+		app.config.get()
+
+		在视图函数中使用 current_app.config.get()
+
+	app.run()参数
+
+		在当前局域网的情况下 输入该地址便可以访问
+		app.run(host="本机ip地址",port=5000,debug=True)
+
+9.路由的基本定义
+
+		@app.route("/demo1")
+		def index():
+			return "demo1"
+
+	给路由传参
+
+		<args>固定的参数必须传给视图函数 
+
+		查询字符串 url中？后面 =传值 &号分隔
+		localhost:5000/? a=10&b=20&c=30
+		对应传参 没有的就不写出来了
+		@app.route("/")
+		def index():
+			//request.args.get（等号前面的key）
+			a=request.args.get('a')
+			b=request.args.get('b')
+			c=request.args.get('c')
+			print(a)
+			print(b)
+			print(c)
+			return '哈哈'
+
+		PostMan 请求测试
+	
+		使用POST 输入网址
+		Body中输入form_data 表单数据
+
+		postman发送过来的post请求中参数
+
+		@app.routr("/",methods=['POST'])
+		def index():
+			//form：request.form.get(表单中的字段key)
+			name =request.form.get('name')
+			age =request.form.get('age')
+			return "哈哈"
+		
+		postman中发送过来的文件
+
+		@app.routr("/",methods=['POST',GET'])
+		def index():
+			//files：request.files.get(表单中key文件的名称)
+			image=request.files.get('image')
+			image.save('./1.jpg')
+			return "save image"
+
+		路由传参数默认当做string处理 也可以指定数据类型
+
+		@app.route("/<user_id>")
+		def use_info(user_id):
+			return "hello %s"%user_id
+
+		这里指定int 尖括号内容是动态的 接受int类型的值 IntegerConverter去处理url传入的参数
+
+		@app.route("/<int:user_id>")
+		def use_info(user_id):
+			return "hello %s"%user_id	
+
+	指定请求方式
+
+		定义一个路由 默认的请求方式
+
+			GET OPTIONS(自带) HEAD(自带)
+
+		@app.route("/",methods=["GET","POST"])
+		def index():
+			return request.method           直接从请求中取到请求方式并返回
+	
+10.视图常用逻辑
+
+	返回json
+	建议使用Flask封装的jsonify方法 可以响应指定的数据类型
+	json基于键值对的字符串，用来实现数据的传输 
+		使用json模块中dumps（把字典转成json）loads（把json转成字典）
+		在使用Flask写一个接口时需要给客户端返回json数据，在Flask中可以直接使用jsonify生成一个json响应
+
+		@app.route("/")
+		def index():
+			json_dict={
+				"user_id":10,
+				"user_name":"laowang"
+			}
+			return jsonify(json_dict)
+
+		不推荐使用json.dumps(json_dict)
+
+	重定向
+
+	redirect函数作为接收的参数为固定的url 不建议直接使用 需要配合url_for实现重定向 接收的参数为函数名相对于url，函数名更不容易发生变化 url_for实现原理 反向解析
+
+	指定路由地址
+
+		@app.route("/")
+		def index():
+			return redirect("http:www.baidu.com")
+
+		重定向可以直接填写自己的url路径也可以使用url_for生成指定的视图函数对应的url
+
+		@app.route("/")
+		def user_info(user_id):
+			return "hello %s" %user_id
+
+		@app.route("/demo")
+		def idnex():
+			return redirect(url_for('视图函数名'，user_id=100))
+
+	自定义状态码
+
+		return后面可以返回自定义的不符合htpp协议的状态码 实现前后端数据交互 也可以返回符合http协议的状态码，相当于修改了框架封装好的默认响应报文中的状态码
+		返回自定义状态码，以实现不符合http协议的状态码
+
+		@app.route("/")
+		def demo():
+			return "状态码：666",666
+
+11.正则路由匹配
+
+	from werkzeug.routing import BaseConverter
+	class RegexConverter(BaseConverter):
+		def __init__(self,url_map,*args)
+			super(RegexConverter,self).__init__(url_map)
+			self.regex=args[0]
+	app.url_map.converters["re"]=RegexConverter
+	@app.route("/<re("[0-9]{3}":user_id)>")
+	def user_info(user_id)
+		return "hello %s"%user_id
+
+	系统自带六种转化器
+
+	DEFAULT_CONVERTERS={
+		'default':UnicodeConverter,
+		'string':UnicodeConverter,
+		'any':AnyConverter,
+		'path':PathConverter,
+		'int':IntegerConverter,
+		'float':FloatConverter,
+		'uuid':UUIDConverter,
+	}
+
+	自定义匹配 简单版本
+
+	class RegexConverter(BaseConverter)
+		regex="[0-9]{3}"
+	/添加转换器
+	app.url_map.converters['regex']=RegexConverter
+	@app.route("/<regex:args>")
+	def converter(args):
+		return "hello %s"%args
+
+	自定义匹配 复杂版本
+
+	class RegexConverter(BaseConverer):
+		def __init__(self,map,*args)
+			super(RegeConverter,self).__init__(map)
+			self.regex=args[0]
+			print(map)
+			print(args[0])
+	/添加转换器
+	app.url_map.converters['regex']=RegexConverter
+	print(app.url_map.converters)
+	@app.route("/<regex('[a-z]{3}'):args>")
+	def converter(args):
+		return "hello %s"%args
+
+12.异常捕获
+
+	abort方法
+		类似于python中raise处理 abort()一旦被触发 后面的代码不执行
+		抛出一个给定状态代码的HTTPException或者指定响应
+		抛出状态码 只能抛出HTTP协议的错误状态码
+		配合errorhandler修饰函数必须传入参数，参数为错误信息，实现自定义的错误页面
+
+	捕获错误
+	@app.errorhandler(500)
+	def internal_server_error(e):
+		return "服务器搬家"
+	@app.errorhandler(ZeroDivisionError)
+	def zero_division_error(e)
+		return "除数不能为0"
+
+13.请求勾子
+
+	请求勾子是通过装饰器的形式实现的 Flask支持4种
+
+		before_first_request 在处理第一个请求前执行
+
+		before_request 在每次请求前执行
+				如果在某修饰函数中返回一个响应视图函数不再被调用
+
+		after_request 如果没有抛出错误 在每次请求后执行
+				接受一个参数视图函数做出响应
+				必须传入response响应对象 并且返回response
+
+		teardown_request 在每次请求后执行
+				接受一个参数 错误信息 如果有相关错误抛出
+				必须传入错误信息
+
+		@app.before_first_request
+		def before_first_request():
+			print("before_first_request")
+		@app.before_request
+		def before_request():
+    		print("before_request")
+    	@app.after_request
+		def after_request(response):
+		    print("after_request")
+		    response.headers["Content-Type"] = "application/json"
+		    return response
+		@app.teardown_request
+		def teardown_request(e):
+		    print("teardown_request")
+		@app.route('/')
+		def index():
+		    return 'index'
+
+14.装饰路由具体实现
+
+	Flask有两大核心 Werkzeug和Jinja2
+		Werkzeug实现了路由、调试和web服务器网关接口
+		Jinja2实现了模板
+
+		Werkzeug
+			内部实现了很多web框架底层的东西 request response
+			与WSGI规范兼容 支持unicode 基本的会话管理和签名cookie
+			集成url请求路由
+			Werkzeug库routing模块是实现url解析 不同的url对应不同的视图函数 会对请求信息的url进行解析，匹配到url对应视图函数 执行该函数生成一个响应信息
+			routing模块内部有：
+				Rule类 用来构造不同url模式对象 路由url规则
+				Map类 存储所有url规则和一些配置信息
+				BaseConverter的子类 负责定义匹配规则
+				MapAdpter类 负责协调Rule做具体的匹配工作
+
+15.request 
+
+	flask中代表当前请求的request对象 其中一个请求上下文变量 在视图函数中直接使用可以取到当前本次请求
+
+16.状态保持
+
+	http底层是TCP/IP协议 是无状态的 每次连接都要三次握手 四次挥手
+	http协议是一种无状态协议，
+	无状态	指一次用户请求时 浏览器服务器无法知道这个用户做过什么 每次请求都是一次新的请求
+	客户端存储信息 cookie
+	服务器存储信息 session
+
+17.Cookie
+
+	由服务器生成，发送给客户端浏览器，浏览器会将Cookie的key/value保存 下次请求同一网站时就发送该cookie给服务器
+	字典、键值对的字符串 实现会话保持 可以设置过去事件 保存在浏览器中不安全
+
+	@app.route("/")
+	def index():
+		/使用响应对象 设置cookie
+		response=make_response("set cookie")
+		/设置cookie 并指定有效期 cookie名称 内容
+		/保存上一次使用者的信息在cookie中
+		response.set_cookie("age",'2','max_age=60')
+		return response
+
+	/获取cookie
+	@app.route("/")
+	def index():
+		age=request.cookies.get('age')
+		return age 
+
+18.Session
+
+	对于敏感、重要信息，建议要存储在服务器内部不能存储在浏览器中
+	Session依赖于Cookie 
+	session数据存储在内存型数据库中 redis
+	Session把session_id存入浏览器中 相对安全
+	请求和返回是两种不同的session内容
+
+	@app.route("/")
+	def index():
+		session['name']="东哥"
+		return 'set session success'
+
+	@app.route("/")
+	def get_session():
+		//request 没有session 这里不需要写request.session
+		name=session.get('name')
+		return name 
+
+19.上下文
+
+	请求上下文 保存了客户端和服务器交互的数据
+		封装了客户端和服务器交互过程中的信息 session表示用户信息 request表示请求的参数信息
+
+	应用上下文	flask应用程序在运行过程中，保存的一些配置信息 比如程序名 数据库连接 应用信息等
+
+		current_app 生命周期最长 用来记录项目日志
+		g 对象可以请求过程用来临时存储数据
+
+20.Flask_Script拓展
+
+	在终端以命令的形式运行项目。动态的指定ip地址port 后面配合flask-migrate拓展实现数据库表的创建（迁移）

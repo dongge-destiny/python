@@ -1,0 +1,105 @@
+Git 源代码管理
+ctrl + k pycharm
+
+1.Git 分布式版本控制系统 团队开发项目进行版本控制
+	源代码管理
+	方便多人协同开发
+	方便版本控制
+
+	Git服务器-->本地仓库-->客户端-->本地仓库-->git
+服务器
+
+	工作区
+		对于添加，修改，删除文件的操作
+	暂存区
+		将工作区中的操作完成小阶段的存储 版本库的一部分
+	仓库区
+		个人开发的一个小阶段的完成，仓库区记录的个版本是可以查看并回退的，但是在暂存区的版本一旦提交就再也没有了
+2. 单人本地仓库操作
+
+	本地仓库是.git隐藏文件
+	
+	//创建git仓库
+	git init
+
+	// 配置个人信息
+	git config user.name 东哥
+	git config user.email 401497299@qq.com
+	touch login.py
+
+	// 查看git对象文件的跟踪状态
+	//红色表示在工作区; 绿色表示在暂存区;当前工作区是干净的表示在仓库区
+	git status
+
+	//提交到暂存区
+	git add .
+	git status
+
+	//描述信息 提交到本地仓库
+	git commit -m "项目立项"
+	git status
+	修改文件
+	git status
+	git add login.py
+	git status
+	git commit -m 变量b
+	git status
+
+	//查看日志
+	git log
+	git reflog
+
+	git commit -am "版本描述" //add commit结合
+
+	//提交到远程仓库 要有账号和密码
+	git push
+
+	//拉取远程参仓库 要有账号和密码
+	git pull
+	
+	回退版本
+	HEAD 当前最新版本
+	HEAD^当前最新版本的前一个版本
+	HEAD^^当前最新版本的前两个版本
+	HEAD~1当前最新版本的前一个版本
+	HEAD~10当前最新版本的前十个版本
+
+	//回退版本
+	git reset --hard HEAD^
+	git reset --hard 版本号
+	修改login.py
+
+	// 比较当前修改的文件(工作区)与仓库的文件(仓库区)的区别
+	git diff HEAD --login.py
+
+	//文件误删操作 
+	git checkout login.py
+
+	cat login.py
+
+	设置记住密码(默认15分钟)
+	git config --global credential.helper cache
+
+	git config --global credential.helper "cache --timeout=3600"
+
+	git config --global credential.helper store
+
+	pycahrm是可以自动记住密码的
+
+3.代码冲突
+
+	多个人操作同一个文件 会产生代码冲突；有人先push，别人再次push就会发生冲突
+	解决冲突，先pull拉取 人工比对，未经别人同意，千万别删别人代码，
+
+4.标签和分支
+
+	多次push需要对记录进行标签标记，方便版本的维护
+	git tag -a 版本的名称 -m 版本的描述信息
+	git push origin 版本的名称
+	git tag -d 版本的名称
+	git push origin --delete tag 版本的名称
+	git checkout -b 分支的名称dev 并切换
+	git checkout master 切换分支
+	git push
+
+
